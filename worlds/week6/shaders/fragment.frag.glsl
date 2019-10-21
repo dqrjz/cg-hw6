@@ -89,7 +89,8 @@ void main() {
     if (uCursor.z > 0. && min(abs(uCursor.x - vXY.x), abs(uCursor.y - vXY.y)) < .01)
           color = vec3(1.,1.,1.);
 
-    fragColor = vec4(sqrt(color * uColor), 1.0);
+    //fragColor = vec4(sqrt(color * uColor), 1.0);
+    fragColor = vec4(sqrt(color), 1.0);
 }
 
 

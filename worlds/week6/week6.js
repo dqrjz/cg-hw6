@@ -1,7 +1,7 @@
 "use strict"
 
 
-const VERTEX_SIZE = 6; // EACH VERTEX CONSISTS OF: x,y,z, ny,ny,nz
+const VERTEX_SIZE = 8; // EACH VERTEX CONSISTS OF: x,y,z, ny,ny,nz, u,v
 
 
  //////////////////////////////////////////////////////////////////
@@ -16,6 +16,8 @@ let createCubeVertices = () => {
    let addVertex = a => {
       for (let i = 0 ; i < a.length ; i++)
          v.push(a[i]);
+      v.push(0);
+      v.push(0);
    }
 
    // EACH SQUARE CONSISTS OF TWO TRIANGLES.
@@ -47,7 +49,154 @@ let createCubeVertices = () => {
    return v;
 }
 
+
+//////////////// callback functions ////////////////
+// sphere
+function uvToSphere(u, v) {
+  let theta = 2. * Math.PI * u;
+  let phi = Math.PI * v - Math.PI / 2;
+
+  let x = Math.cos(theta) * Math.cos(phi);
+  let y = Math.sin(theta) * Math.cos(phi);
+  let z = Math.sin(phi);
+  return [x, y, z,
+          x, y, z];
+}
+
+// torus
+function uvToTorus(u, v) {
+  let theta = 2. * Math.PI * u;
+  let phi = 2. * Math.PI * v;
+
+  let r = 0.25;
+
+  let x = Math.cos(theta) * (1. + r * Math.cos(phi));
+  let y = Math.sin(theta) * (1. + r * Math.cos(phi));
+  let z = r * Math.sin(phi);
+
+  let nx = Math.cos(theta) * Math.cos(phi);
+  let ny = Math.sin(theta) * Math.cos(phi);
+  let nz = Math.sin(phi);
+  return [ x,  y,  z,
+          nx, ny, nz];
+}
+
+// tube
+function uvToTube(u, v) {
+  let theta = 2. * Math.PI * u;
+
+  let x = Math.cos(theta);
+  let y = Math.sin(theta);
+  let z = 2. * v - 1.;
+  return [x, y, z,
+          x, y, theta];
+}
+
+// cylinder
+function uvToCylinder(u, v) {
+  let theta = 2. * Math.PI * u;
+
+  let c = Math.cos(theta);
+  let s = Math.sin(theta);
+  let z = Math.max(-1., Math.min(1., 10. * v - 5.));
+
+  switch (Math.floor(5.001 * v)) {
+    case 0: case 5: return [0, 0, z, 0, 0, z]; // center of back/front end cap
+    case 1: case 4: return [c, s, z, 0, 0, z]; // perimeter of back/front end cap
+    case 2: case 3: return [c, s, z, c, s, 0]; // back/front of cylindrical tube
+  }
+}
+
+//////////////// create mesh ////////////////
+// function createMesh(M, N, callback) {
+//   // M column, N row
+//   if (M == 1 || N == 1) throw "Wrong column or row!";
+//   let vertices = [];
+//   let addVertex = (a, uv) => {
+//     for (let i = 0 ; i < a.length ; i++)
+//       vertices.push(a[i]);
+//     vertices.push(uv[0]);
+//     vertices.push(uv[1]);
+//   }
+//   let addTriangle = (a,b,c) => {
+//      addVertex(callback(a[0], a[1]), a);
+//      addVertex(callback(b[0], b[1]), b);
+//      addVertex(callback(c[0], c[1]), c);
+//   }
+
+//   let du = 1. / (M - 1);
+//   let dv = 1. / (N - 1);
+//   for (let row = 0; row < N - 1; row++) {
+//     let u0 = row % 2 == 0 ? 1 : 0;
+//     let sign = row % 2 == 0 ? -1 : 1;
+//     let vBot = row * dv;
+//     let vTop = (row + 1) * dv;
+//     if (row == 0) addTriangle([u0, vBot], [u0, vTop], [u0 + sign * du, vBot]);
+//     addTriangle([u0, vTop], [u0 + sign * du, vBot], [u0 + sign * du, vTop]);
+//     let numSteps = M - 1;
+//     for (let i = 1; i < numSteps; i++) {
+//       let u = u0 + sign * i * du;
+//       addTriangle([u, vBot], [u, vTop], [u + sign * du, vBot]);
+//       addTriangle([u, vTop], [u + sign * du, vBot], [u + sign * du, vTop]);
+//     }
+//   }
+//   return vertices;
+// }
+
+function createMesh(M, N, callback) {
+  // M column, N row
+  if (M == 1 || N == 1) throw "Wrong column or row!";
+  let vertices = [];
+  let addVertex = (u, v) => {
+    let a = callback(u, v);
+    for (let i = 0 ; i < a.length ; i++)
+      vertices.push(a[i]);
+    vertices.push(u);
+    vertices.push(v);
+  }
+
+  let du = 1. / (M - 1);
+  let dv = 1. / (N - 1);
+  for (let row = 0; row < N - 1; row++) {
+    let u0 = row % 2 == 0 ? 1 : 0;
+    let sign = row % 2 == 0 ? -1 : 1;
+    let vBot = row * dv;
+    let vTop = (row + 1) * dv;
+    if (row == 0) addVertex(u0, vBot);
+    addVertex(u0, vTop);
+    // let numSteps = M - 1;
+    for (let col = 1; col < M; col++) {
+      let u = u0 + sign * col * du;
+      addVertex(u, vBot);
+      addVertex(u, vTop);
+    }
+  }
+  return vertices;
+}
+
+//////////////// create vertices ////////////////
+let sphereVertices = createMesh(20, 20, uvToSphere);
 let cubeVertices = createCubeVertices();
+let torusVertices = createMesh(20, 20, uvToTorus);
+let cylinderVertices = createMesh(20, 20, uvToCylinder);
+
+
+////// DEBUG ///////
+// let round = v => {
+//   let ret = [];
+//   for (let i = 0; i < v.length; i++)
+//     ret.push(Math.round(v[i]));
+//   return ret;
+// }
+// let M = 5, N = 3;
+// let arrayLength = (1 + (2 * M - 1) * (N - 1)) * VERTEX_SIZE;
+// console.log("arrayLength = " + arrayLength);
+// let sphereVerticesTest = round(createMesh(M, N, uvToSphere));
+// console.log("sphereVerticesTest.length = " + sphereVerticesTest.length);
+// for (let i = 0; i < sphereVerticesTest.length; i+=VERTEX_SIZE) {
+//   console.log(sphereVerticesTest.slice(i, i+6));
+// }
+////// DEBUG ///////
 
 
 async function setup(state) {
@@ -126,8 +275,8 @@ async function setup(state) {
                 state.uLightsLoc = [];
                 for (var i = 0; i < NL; i++) {
                     state.uLightsLoc[i] = {};
-                    state.uLightsLoc[i].src = gl.getUniformLocation(program, 'uLights[' + i + '].src');
-                    state.uLightsLoc[i].col = gl.getUniformLocation(program, 'uLights[' + i + '].col');
+                    state.uLightsLoc[i].src = gl.getUniformLocation(program, 'uLights['+i+'].src');
+                    state.uLightsLoc[i].col = gl.getUniformLocation(program, 'uLights['+i+'].col');
                 }
 
                 var NS = 1;
@@ -316,6 +465,50 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 //  FOR HOMEWORK, YOU WILL WANT TO DO SOMETHING DIFFERENT.            //
 //                                                                    //
  //////////////////////////////////////////////////////////////////////
+    let drawShape = (type, vertices) => {
+       // gl.uniform3fv(state.uColorLoc, color);
+       gl.uniformMatrix4fv(state.uModelLoc, false, m.value());
+       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+       gl.drawArrays(type, 0, vertices.length / VERTEX_SIZE);
+    }
+    let drawSphere   = () => drawShape(gl.TRIANGLE_STRIP, sphereVertices);
+    let drawCube     = () => drawShape(gl.TRIANGLES, cubeVertices);
+    let drawTorus    = () => drawShape(gl.TRIANGLE_STRIP, torusVertices);
+    let drawCylinder = () => drawShape(gl.TRIANGLE_STRIP, cylinderVertices);
+
+    // m.save();
+
+    // m.identity();
+    // m.translate(-.6,.5,-4);
+    // m.scale(.4,.4,.4);
+    // // drawShape(gl.TRIANGLE_STRIP, sphereVertices);
+    // drawSphere();
+
+    // m.identity();
+    // m.translate(-.6,-.5,-4);
+    // m.rotateY(-1);
+    // m.rotateX(-1);
+    // m.scale(.29,.29,.29);
+    // // drawShape(gl.TRIANGLES, cubeVertices);
+    // drawCube();
+
+    // m.identity();
+    // m.translate(.6,.5,-4);
+    // m.rotateY(-1);
+    // m.rotateX(.5);
+    // m.scale(.33,.33,.33);
+    // // drawShape(gl.TRIANGLE_STRIP, torusVertices);
+    // drawTorus();
+
+    // m.identity();
+    // m.translate(.6,-.5,-4);
+    // m.rotateY(-.5);
+    // m.rotateX(-.5);
+    // m.scale(.33,.33,.4);
+    // // drawShape(gl.TRIANGLE_STRIP, cylinderVertices);
+    // drawCylinder();
+
+    // m.restore();
 
     m.save();
     m.identity();
@@ -337,16 +530,14 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
           m.scale(.3, .3, .3);
           m.rotateX(0.3 - 0.3 * Math.sin(3 * state.time));
 
-          gl.uniformMatrix4fv(state.uModelLoc, false, m.value() );
-          gl.drawArrays(gl.TRIANGLES, 0, cubeVertices.length / VERTEX_SIZE);
+          drawSphere();
       m.restore();
       // body
       m.save();
           m.translate(0., -0.5, 0.2);
           m.scale(.2, .6, .2);
-
-          gl.uniformMatrix4fv(state.uModelLoc, false, m.value() );
-          gl.drawArrays(gl.TRIANGLES, 0, cubeVertices.length / VERTEX_SIZE);
+          m.rotateY(0.3 * state.time);
+          drawCylinder();
       m.restore();
 
       for (let side = -1 ; side <= 1 ; side += 2) {
@@ -358,9 +549,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             m.translate(side * .3,0,0);
             m.save();
                m.scale(.3,.05,.05);
-               gl.uniform3fv(state.uColorLoc, state.color0 );
-               gl.uniformMatrix4fv(state.uModelLoc, false, m.value() );
-               gl.drawArrays(gl.TRIANGLES, 0, cubeVertices.length / VERTEX_SIZE);
+               drawTorus();
             m.restore();
 
             m.translate(side * .3,0,0);
@@ -368,9 +557,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             m.translate(side * .3,0,0);
             m.save();
                m.scale(.3,.05,.05);
-               gl.uniform3fv(state.uColorLoc, state.color0 );
-               gl.uniformMatrix4fv(state.uModelLoc, false, m.value() );
-               gl.drawArrays(gl.TRIANGLES, 0, cubeVertices.length / VERTEX_SIZE);
+               drawTorus();
             m.restore();
          m.restore();
       }
@@ -386,12 +573,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
             m.save();
                m.scale(.35,.05,.05);
-               gl.uniform3fv(state.uColorLoc, state.color0 );
-               gl.uniformMatrix4fv(state.uModelLoc, false, m.value() );
-               gl.drawArrays(gl.TRIANGLES, 0, cubeVertices.length / VERTEX_SIZE);
+               drawCube();
             m.restore();
-
-            
          m.restore();
       }
     m.restore();
@@ -408,8 +591,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
       m.translate(0., -2., 0.);
       m.scale(1., .05, 1.);
 
-      gl.uniformMatrix4fv(state.uModelLoc, false, m.value() );
-      gl.drawArrays(gl.TRIANGLES, 0, cubeVertices.length / VERTEX_SIZE);
+      drawCube();
     m.restore();
 
 
