@@ -68,7 +68,7 @@ function uvToTorus(u, v) {
   let theta = 2. * Math.PI * u;
   let phi = 2. * Math.PI * v;
 
-  let r = 0.25;
+  let r = 0.12;
 
   let x = Math.cos(theta) * (1. + r * Math.cos(phi));
   let y = Math.sin(theta) * (1. + r * Math.cos(phi));
@@ -108,41 +108,6 @@ function uvToCylinder(u, v) {
 }
 
 //////////////// create mesh ////////////////
-// function createMesh(M, N, callback) {
-//   // M column, N row
-//   if (M == 1 || N == 1) throw "Wrong column or row!";
-//   let vertices = [];
-//   let addVertex = (a, uv) => {
-//     for (let i = 0 ; i < a.length ; i++)
-//       vertices.push(a[i]);
-//     vertices.push(uv[0]);
-//     vertices.push(uv[1]);
-//   }
-//   let addTriangle = (a,b,c) => {
-//      addVertex(callback(a[0], a[1]), a);
-//      addVertex(callback(b[0], b[1]), b);
-//      addVertex(callback(c[0], c[1]), c);
-//   }
-
-//   let du = 1. / (M - 1);
-//   let dv = 1. / (N - 1);
-//   for (let row = 0; row < N - 1; row++) {
-//     let u0 = row % 2 == 0 ? 1 : 0;
-//     let sign = row % 2 == 0 ? -1 : 1;
-//     let vBot = row * dv;
-//     let vTop = (row + 1) * dv;
-//     if (row == 0) addTriangle([u0, vBot], [u0, vTop], [u0 + sign * du, vBot]);
-//     addTriangle([u0, vTop], [u0 + sign * du, vBot], [u0 + sign * du, vTop]);
-//     let numSteps = M - 1;
-//     for (let i = 1; i < numSteps; i++) {
-//       let u = u0 + sign * i * du;
-//       addTriangle([u, vBot], [u, vTop], [u + sign * du, vBot]);
-//       addTriangle([u, vTop], [u + sign * du, vBot], [u + sign * du, vTop]);
-//     }
-//   }
-//   return vertices;
-// }
-
 function createMesh(M, N, callback) {
   // M column, N row
   if (M == 1 || N == 1) throw "Wrong column or row!";
@@ -175,10 +140,10 @@ function createMesh(M, N, callback) {
 }
 
 //////////////// create vertices ////////////////
-let sphereVertices = createMesh(20, 20, uvToSphere);
+let sphereVertices = createMesh(50, 50, uvToSphere);
 let cubeVertices = createCubeVertices();
-let torusVertices = createMesh(20, 20, uvToTorus);
-let cylinderVertices = createMesh(20, 20, uvToCylinder);
+let torusVertices = createMesh(40, 40, uvToTorus);
+let cylinderVertices = createMesh(40, 40, uvToCylinder);
 
 
 ////// DEBUG ///////
@@ -454,6 +419,7 @@ function onStartFrame(t, state) {
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     let m = state.m;
+    let time = state.time;
 
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
@@ -476,126 +442,358 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     let drawTorus    = () => drawShape(gl.TRIANGLE_STRIP, torusVertices);
     let drawCylinder = () => drawShape(gl.TRIANGLE_STRIP, cylinderVertices);
 
-    // m.save();
-
-    // m.identity();
-    // m.translate(-.6,.5,-4);
-    // m.scale(.4,.4,.4);
-    // // drawShape(gl.TRIANGLE_STRIP, sphereVertices);
-    // drawSphere();
-
-    // m.identity();
-    // m.translate(-.6,-.5,-4);
-    // m.rotateY(-1);
-    // m.rotateX(-1);
-    // m.scale(.29,.29,.29);
-    // // drawShape(gl.TRIANGLES, cubeVertices);
-    // drawCube();
-
-    // m.identity();
-    // m.translate(.6,.5,-4);
-    // m.rotateY(-1);
-    // m.rotateX(.5);
-    // m.scale(.33,.33,.33);
-    // // drawShape(gl.TRIANGLE_STRIP, torusVertices);
-    // drawTorus();
-
-    // m.identity();
-    // m.translate(.6,-.5,-4);
-    // m.rotateY(-.5);
-    // m.rotateX(-.5);
-    // m.scale(.33,.33,.4);
-    // // drawShape(gl.TRIANGLE_STRIP, cylinderVertices);
-    // drawCylinder();
-
-    // m.restore();
-
-    m.save();
+    m.save(); // start
     m.identity();
-    m.translate(0,0,-6);
-    m.rotateY(0.3*state.time);
-     m.rotateY(1);
+    m.translate(0,0,-4);
+    m.rotateX(Math.PI / 10+0.1 * Math.sin(time));
+    m.rotateY(0.5 * time);
+
+    // sun
     m.save();
-    gl.uniform3fv(state.uMaterialsLoc[0].ambient , [0.,.3,1.]);
-    gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [0.,.3,1.]);
-    gl.uniform3fv(state.uMaterialsLoc[0].specular, [0.,1.,1.]);
-    gl.uniform1f (state.uMaterialsLoc[0].power   , 20.);
-    gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
-    gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
-    gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction   , 1.5);
-    m.translate(0., 0.4 + 0.5 * Math.sin(3 * state.time), -0.3);
-      // head
-      m.save();
-          m.translate(0., .5, 0.25);
-          m.scale(.3, .3, .3);
-          m.rotateX(0.3 - 0.3 * Math.sin(3 * state.time));
-
-          drawSphere();
-      m.restore();
-      // body
-      m.save();
-          m.translate(0., -0.5, 0.2);
-          m.scale(.2, .6, .2);
-          m.rotateY(0.3 * state.time);
-          drawCylinder();
-      m.restore();
-
-      for (let side = -1 ; side <= 1 ; side += 2) {
-         let theta = Math.sin(3 * state.time) * side;
-         m.save();
-            m.translate(side * .3,0,0);
-            m.rotateZ(theta);               // SHOULDER
-            m.rotateY(-side + .8 * theta);
-            m.translate(side * .3,0,0);
-            m.save();
-               m.scale(.3,.05,.05);
-               drawTorus();
-            m.restore();
-
-            m.translate(side * .3,0,0);
-            m.rotateZ(theta);              // ELBOW
-            m.translate(side * .3,0,0);
-            m.save();
-               m.scale(.3,.05,.05);
-               drawTorus();
-            m.restore();
-         m.restore();
-      }
-
-      for (let side = -1 ; side <= 1 ; side += 2) {
-         let theta = Math.sin(3 * state.time) * side;
-         m.save();
-            m.translate(0,-1.2,0.25);
-            m.translate(side * .3,0,0);
-            m.rotateZ(-side * 0.9 + 0.5 * theta);               // SHOULDER
-            //m.rotateY(-side + .8 * theta);
-            m.translate(side * .3,0,0);
-
-            m.save();
-               m.scale(.35,.05,.05);
-               drawCube();
-            m.restore();
-         m.restore();
-      }
-    m.restore();
-
-    m.save();
-      gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.5,.6,.3]);
-      gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.5,.6,.3]);
-      gl.uniform3fv(state.uMaterialsLoc[0].specular, [0.,1.,1.]);
-      gl.uniform1f (state.uMaterialsLoc[0].power   , 20.);
+      m.translate(300,0,-500);
+      m.scale(50,50,50);
+      gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.9,.1,.1]);
+      gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.9,.1,.1]);
+      gl.uniform3fv(state.uMaterialsLoc[0].specular, [.3,.3,.3]);
+      gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
       gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
       gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
-      gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction   , 1.5);
+      gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+      drawSphere();
+    m.restore();
 
-      m.translate(0., -2., 0.);
-      m.scale(1., .05, 1.);
+    // center pole
+    m.save();
+      gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.13,.12,.1]);
+      gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.13,.12,.1]);
+      gl.uniform3fv(state.uMaterialsLoc[0].specular, [.7,.6,.5]);
+      gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+      gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+      gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+      gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+      m.translate(0,0,0)
+      m.scale(.05,.05,1.);
+      drawCylinder();
+    m.restore();
 
-      drawCube();
+    // front torus
+    m.save();
+      m.translate(0,0,1.);
+      m.rotateZ(0.8*time);
+      // front center
+      m.save();
+        gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.01,.01,.01]);
+        gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.01,.01,.01]);
+        gl.uniform3fv(state.uMaterialsLoc[0].specular, [.7,.6,.5]);
+        gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+        gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+        gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+        gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+        m.translate(0,0,.05);
+        m.save();
+          m.translate(0,0,.05);
+          m.scale(.07,.07,0.3);
+          drawTorus();
+        m.restore();
+        m.save();
+          m.translate(0,0,.1);
+          m.scale(.05,.05,0.1);
+          drawTorus();
+        m.restore();
+        m.save();
+          m.translate(0,0,-.1);
+          m.scale(.1,.1,0.11);
+          drawCylinder();
+        m.restore();
+      m.restore();
+      // little cylinders
+      for (let i = 0; i < 16; i++) {
+        m.save();
+          let theta = Math.PI/8 * i;
+          m.translate(-.02*Math.cos(theta),-.02*Math.sin(theta),0.08);
+          m.translate(.1*Math.cos(theta),.1*Math.sin(theta),0);
+          m.rotateX(Math.PI/ 20*Math.sin(theta));
+          m.rotateY(Math.PI/ 20*Math.cos(theta));
+          m.scale(.01,.01,.03);
+          gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.001,.001,.001]);
+          gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.001,.001,.001]);
+          gl.uniform3fv(state.uMaterialsLoc[0].specular, [.7,.6,.5]);
+          gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+          gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+          gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+          gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+          drawCylinder();
+        m.restore();
+      }
+
+      // two spines
+      for (let i = 0; i < 10; i++) {
+        m.save();
+          // m.translate(0,0,0);
+          m.rotateX(Math.PI/ 2);
+          m.scale(.06-0.002*i,.02-0.002*i,.1 + 0.5/10*i);
+          gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.05,.05,.05]);
+          gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.13,.06,.06]);
+          gl.uniform3fv(state.uMaterialsLoc[0].specular, [.7,.6,.5]);
+          gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+          gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+          gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+          gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+          drawCylinder();
+        m.restore();
+      }
+      // torus
+      let deltaTorusFront = .025;
+      for (let i = -1; i <= 1; i++){
+        m.save();
+          m.translate(0,0,i*deltaTorusFront);
+          m.scale(.6,.6,.4);
+          gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.05,.05,.05]);
+          gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.13,.06,.06]);
+          gl.uniform3fv(state.uMaterialsLoc[0].specular, [.7,.6,.5]);
+          gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+          gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+          gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+          gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+          drawTorus();
+        m.restore();
+      }
+      // bulges
+      let numBulgeFront = 20;
+      for (let i = 0; i < numBulgeFront; i++) {
+        m.save();
+          let theta = 2 * Math.PI/numBulgeFront * i;
+          m.rotateZ(theta);
+          m.translate(-.6, 0 , 0);
+          m.scale(.085,.009,.085);
+          gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.004,.001,.001]);
+          gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [70/255*70/255, 30/255*30/255, 27/255*27/255]);
+          gl.uniform3fv(state.uMaterialsLoc[0].specular, [70/255*70/255, 30/255*30/255, 27/255*27/255]);
+          gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+          gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+          gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+          gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+          drawSphere();
+        m.restore();
+      }
+    m.restore();
+
+    // between front and center
+    m.save();
+      m.translate(0,0,.7);
+      m.save();
+        m.translate(0,0,-.1);
+        m.scale(.15,.15,0.2);
+        gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.1,.1,.1]);
+        gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.1,.1,.1]);
+        gl.uniform3fv(state.uMaterialsLoc[0].specular, [1,1,1]);
+        gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+        gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+        gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+        gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+        drawCylinder();
+      m.restore();
+
     m.restore();
 
 
+    // center part
+    m.save();
+      for (let i = 0; i < 3; i++) {
+        let theta = 2 * Math.PI / 3 * i;
+        m.save();
+          m.rotateZ(theta);
+          // two connections
+          let delta = 0.09;
+          m.save();
+            m.translate(-.1,0,-delta);
+            m.scale(.1,.015,.015);
+            gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.07,.05,.05]);
+            gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.05,.05,.05]);
+            gl.uniform3fv(state.uMaterialsLoc[0].specular, [.7,.6,.5]);
+            gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+            gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+            gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+            gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+            drawCube();
+          m.restore()
+          m.save();
+            m.translate(-.1,0,delta);
+            m.scale(.1,.015,.015);
+            drawCube();
+          m.restore()
+          // main cube
+          m.save();
+            m.translate(-.17,0,0);
+            m.scale(.05,.05,.12);
+            gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.2,.2,.2]);
+            gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.2,.2,.2]);
+            gl.uniform3fv(state.uMaterialsLoc[0].specular, [1,1,1]);
+            gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+            gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+            gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+            gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+            drawCube();
+          m.restore()
+        m.restore()
+      }
     m.restore();
+
+    // back torus
+    m.save();
+      m.translate(0,0,-.5);
+      m.rotateZ(-0.7*time);
+      // back center
+      gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.01,.01,.01]);
+      gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.01,.01,.01]);
+      gl.uniform3fv(state.uMaterialsLoc[0].specular, [.7,.6,.5]);
+      gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+      gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+      gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+      gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+      m.save();
+        m.translate(0,0,.05);
+        m.save();
+          m.translate(0,0,.05);
+          m.scale(.07,.07,0.3);
+          drawTorus();
+        m.restore();
+        m.save();
+          m.translate(0,0,.1);
+          m.scale(.05,.05,0.1);
+          drawTorus();
+        m.restore();
+        m.save();
+          m.translate(0,0,-.05);
+          m.scale(.1,.1,0.11);
+          drawCylinder();
+        m.restore();
+      m.restore();
+      gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.04,.04,.04]);
+      gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.1,.1,.1]);
+      gl.uniform3fv(state.uMaterialsLoc[0].specular, [.7,.6,.5]);
+      gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+      gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+      gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+      gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+      for (let i = 0; i < 16; i++) {
+        m.save();
+          let theta = Math.PI/8 * i;
+          m.translate(-.02*Math.cos(theta),-.02*Math.sin(theta),0.08);
+          m.translate(.1*Math.cos(theta),.1*Math.sin(theta),0);
+          m.rotateX(Math.PI/ 20*Math.sin(theta));
+          m.rotateY(Math.PI/ 20*Math.cos(theta));
+          m.scale(.01,.01,.03);
+          drawCylinder();
+        m.restore();
+      }
+
+      // five spines
+      let numSpinesBack = 5;
+      for (let i = 0; i < numSpinesBack; i++) {
+        let theta = 2 * Math.PI / numSpinesBack * i;
+        m.save();
+          m.rotateZ(theta);
+          for (let i = 0; i < 7; i++) {
+            m.save();
+              m.translate(0.1 + 0.05*i,0,0);
+              m.rotateX(Math.PI/ 2);
+              m.rotateY(Math.PI/ 2);
+              m.scale(.04 - 0.0015*i,.03 - 0.0015*i,.04);
+              gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.05,.05,.05]);
+              gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.13,.06,.06]);
+              gl.uniform3fv(state.uMaterialsLoc[0].specular, [.7,.6,.5]);
+              gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+              gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+              gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+              gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+              drawCylinder();
+            m.restore();
+          }
+        m.restore()
+      }
+      // torus
+      let deltaTorusBack = .02;
+      for (let i = -2; i <= 2; i++){
+        m.save();
+          m.translate(0,0,i*deltaTorusBack);
+          m.scale(.5,.5,.8);
+          drawTorus();
+        m.restore();
+      }
+      // bulges
+      let numBulgeBack = 10;
+      for (let i = 0; i < numBulgeBack; i++) {
+        m.save();
+          let theta = 2 * Math.PI/numBulgeBack * (i+1);
+          m.rotateZ(theta);
+          m.translate(-.5, 0 , 0);
+          m.scale(.08,.009,.15);
+          gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.004,.001,.001]);
+          gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [70/255*70/255, 30/255*30/255, 27/255*27/255]);
+          gl.uniform3fv(state.uMaterialsLoc[0].specular, [70/255*70/255, 30/255*30/255, 27/255*27/255]);
+          gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+          gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+          gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+          gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+          drawSphere();
+        m.restore();
+      }
+    m.restore();
+
+
+    // back engine
+    m.save();
+      m.translate(0,0,-.9);
+      let numEngines = 6;
+      for (let i = 0; i < numEngines; i++) {
+        let theta = 2 * Math.PI/numEngines * i;
+        m.save();
+          m.rotateZ(theta);
+          m.translate(-.1, 0 , 0);
+          m.scale(.05,.05,.1);
+          gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.2,.2,.2]);
+          gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.2,.2,.2]);
+          gl.uniform3fv(state.uMaterialsLoc[0].specular, [1,1,1]);
+          gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+          gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+          gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+          gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+          drawCylinder();
+        m.restore();
+        m.save();
+          m.rotateZ(theta);
+          m.translate(-.1, 0 , -.08 + 0.02*Math.sin(time));
+          m.scale(.02,.02,.07);
+          gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.6,.2,.1]);
+          gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.6,.2,.1]);
+          gl.uniform3fv(state.uMaterialsLoc[0].specular, [0,0,0]);
+          gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+          gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+          gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+          gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+          drawSphere();
+        m.restore();
+      }
+
+    m.restore();
+
+
+    // planet
+    m.save();
+      m.translate(1,-12,2);
+      m.scale(10,10,10);
+      gl.uniform3fv(state.uMaterialsLoc[0].ambient , [.1,.3,.1]);
+      gl.uniform3fv(state.uMaterialsLoc[0].diffuse , [.1,.3,.1]);
+      gl.uniform3fv(state.uMaterialsLoc[0].specular, [.3,.3,.3]);
+      gl.uniform1f (state.uMaterialsLoc[0].power   , 15.);
+      gl.uniform3fv(state.uMaterialsLoc[0].reflect , [1.0,1.0,1.0]);
+      gl.uniform3fv(state.uMaterialsLoc[0].transparent, [0.5,0.5,0.5]);
+      gl.uniform1f (state.uMaterialsLoc[0].indexOfRefraction, 1.5);
+      drawSphere();
+    m.restore();
+
+    m.restore(); // end
 }
 
 function onEndFrame(t, state) {
